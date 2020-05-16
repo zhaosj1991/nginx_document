@@ -42,6 +42,7 @@ ngx_create_listening(ngx_conf_t *cf, struct sockaddr *sockaddr,
     ls->sockaddr = sa;
     ls->socklen = socklen;
 
+    //sa中的ip和port转换为文本格式存入text
     len = ngx_sock_ntop(sa, socklen, text, NGX_SOCKADDR_STRLEN, 1);
     ls->addr_text.len = len;
 
@@ -65,11 +66,13 @@ ngx_create_listening(ngx_conf_t *cf, struct sockaddr *sockaddr,
         break;
     }
 
+    //注意用的是ngx_pnalloc: 申请不进行对齐的内存
     ls->addr_text.data = ngx_pnalloc(cf->pool, len);
     if (ls->addr_text.data == NULL) {
         return NULL;
     }
 
+    //将文本格式的ip和port存入addr_text.data，类似0.0.0.0:1234格式
     ngx_memcpy(ls->addr_text.data, text, len);
 
 #if !(NGX_WIN32)

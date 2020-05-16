@@ -13,12 +13,24 @@
 #include <ngx_core.h>
 
 
+/*  
+    ngx_array_t 理解为可以自动扩容的数组
+    
+    ngx_array_push 向其中添加元素。
+    注意：push这个操作和平时用到的push用法有些不同，并不是把元素赋值然后
+    加到数组中，而是返回一个可以填充元素的地址，然后我们就可以在这个地址
+    里赋值，所以push操作并不需要元素的内容作为参数。
+    
+    ngx_array_push_n 向其中添加n个元素，返回n个元素的首地址，后续可以赋值。
+*/
+
+
 typedef struct {
-    void        *elts;
-    ngx_uint_t   nelts;
-    size_t       size;
-    ngx_uint_t   nalloc;
-    ngx_pool_t  *pool;
+    void        *elts;      //数组首地址
+    ngx_uint_t   nelts;     //已存储元素个数，可以理解为size
+    size_t       size;      //每个元素大小
+    ngx_uint_t   nalloc;    //数组可容纳元素个数，可以理解为capacity
+    ngx_pool_t  *pool;      //数组位于的内存池
 } ngx_array_t;
 
 

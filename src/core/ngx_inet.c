@@ -179,6 +179,7 @@ ngx_inet6_addr(u_char *p, size_t len, u_char *addr)
 #endif
 
 
+//将sockaddr中的ip和port转换为 0.0.0.0:1234 格式存储到text中
 size_t
 ngx_sock_ntop(struct sockaddr *sa, socklen_t socklen, u_char *text, size_t len,
     ngx_uint_t port)
@@ -198,6 +199,16 @@ ngx_sock_ntop(struct sockaddr *sa, socklen_t socklen, u_char *text, size_t len,
     switch (sa->sa_family) {
 
     case AF_INET:
+
+        /*
+            // linux define, ip地址的u32存储方式
+            
+            struct in_addr	sin_addr;	// Internet address
+            // Internet address.
+            struct in_addr {
+            	__be32	s_addr;
+            };
+        */
 
         sin = (struct sockaddr_in *) sa;
         p = (u_char *) &sin->sin_addr;
