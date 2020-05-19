@@ -16,18 +16,23 @@
 typedef struct ngx_list_part_s  ngx_list_part_t;
 
 struct ngx_list_part_s {
-    void             *elts;
-    ngx_uint_t        nelts;
-    ngx_list_part_t  *next;
+    void             *elts;     //数组的头指针
+    ngx_uint_t        nelts;    //已存储数组元素的个数
+    ngx_list_part_t  *next;     //指向下一个ngx_list_part_t节点
 };
 
 
+/* 
+    ngx_list_t 并不是单纯的链表，它的数据被具体的定义为了数组。
+    数组中存储的才是平常定义链表中的void* data数据，所以称之为
+    数组链表更加容易理解些
+*/
 typedef struct {
-    ngx_list_part_t  *last;
-    ngx_list_part_t   part;
-    size_t            size;
-    ngx_uint_t        nalloc;
-    ngx_pool_t       *pool;
+    ngx_list_part_t  *last;     //永远指向链表的最后一个节点
+    ngx_list_part_t   part;     //链表头节点
+    size_t            size;     //节点中数组的单个元素占用的内存大小
+    ngx_uint_t        nalloc;   //每个节点中数组元素个数
+    ngx_pool_t       *pool;     //链表所位于的内存池
 } ngx_list_t;
 
 
