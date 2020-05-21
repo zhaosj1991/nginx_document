@@ -16,18 +16,24 @@
 typedef struct ngx_listening_s  ngx_listening_t;
 
 struct ngx_listening_s {
-    ngx_socket_t        fd;
+    //socket句柄，typedfe为对应系统下的真实socket句柄
+    //linux --> int   win32 --> SOCKET
+    ngx_socket_t        fd;     
 
-    struct sockaddr    *sockaddr;
+    struct sockaddr    *sockaddr;   //监听地址
     socklen_t           socklen;    /* size of sockaddr */
-    size_t              addr_text_max_len;
-    ngx_str_t           addr_text;
+    size_t              addr_text_max_len; //字符串IP最大长度，也就是addr_text最大长度
+    ngx_str_t           addr_text;  //字符串形式出的IP地址
 
-    int                 type;
+    //套接字类型，SOCK_STREAM-->TCP        SOCK_DGRAM-->UDP
+    int                 type;   
 
+    //TCP实现监听时的backlog队列，表示允许正在通过三次握手建立TCP连接
+    //但还没有任何进程开始处理的最大个数
     int                 backlog;
-    int                 rcvbuf;
-    int                 sndbuf;
+    
+    int                 rcvbuf; //套接字接收缓冲区大小
+    int                 sndbuf; //套接字发送缓冲区大小
 #if (NGX_HAVE_KEEPALIVE_TUNABLE)
     int                 keepidle;
     int                 keepintvl;
@@ -35,20 +41,28 @@ struct ngx_listening_s {
 #endif
 
     /* handler of accepted connection */
+    //当新的TCP连接成功建立后的处理方法，实际上框架并不使用，其他模块
+    //如果HTTP会自定义该方法
     ngx_connection_handler_pt   handler;
 
+    //更多时候作为一个保留指针，目前主要用于HTTP或者mail等模块
+    //用于保存当前监听端口对应着的所有主机名
     void               *servers;  /* array of ngx_http_in_addr_t, for example */
 
     ngx_log_t           log;
     ngx_log_t          *logp;
 
+    //如果为新的TCP连接创建内存池，则内存池的初始大小为pool_size
     size_t              pool_size;
     /* should be here because of the AcceptEx() preread */
     size_t              post_accept_buffer_size;
     /* should be here because of the deferred accept */
+    //post_accept_timeout秒后仍然没有收到用户数据，则内核直接丢弃该连接
     ngx_msec_t          post_accept_timeout;
 
+    //指向前一个ngx_listening_t结构，多一个ngx_listening_t结构体之间由previous组成单链表
     ngx_listening_t    *previous;
+    //当前监听句柄对应着的ngx_connection_t结构
     ngx_connection_t   *connection;
 
     ngx_rbtree_t        rbtree;
@@ -56,6 +70,8 @@ struct ngx_listening_s {
 
     ngx_uint_t          worker;
 
+    //标志位，为1则表示在当前监听句柄有效、且执行ngx_init_cycle时不关闭监听端口，
+    //为0时则正常关闭。该标志位框架代码会自动设置。
     unsigned            open:1;
     unsigned            remain:1;
     unsigned            ignore:1;

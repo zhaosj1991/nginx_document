@@ -46,7 +46,7 @@ struct ngx_cycle_s {
     ngx_uint_t                log_use_stderr;  /* unsigned  log_use_stderr:1; */
 
     ngx_connection_t        **files;
-    ngx_connection_t         *free_connections;
+    ngx_connection_t         *free_connections; //连接池中可用连接总数
     ngx_uint_t                free_connection_n;
 
     ngx_module_t            **modules;

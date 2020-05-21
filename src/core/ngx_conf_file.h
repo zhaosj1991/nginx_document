@@ -19,9 +19,9 @@
  *    TT        command type, i.e. HTTP "location" or "server" command
  */
 
-#define NGX_CONF_NOARGS      0x00000001
-#define NGX_CONF_TAKE1       0x00000002
-#define NGX_CONF_TAKE2       0x00000004
+#define NGX_CONF_NOARGS      0x00000001 //配置项不允许带参数
+#define NGX_CONF_TAKE1       0x00000002 //配置项可以带1个参数，以此类推
+#define NGX_CONF_TAKE2       0x00000004 
 #define NGX_CONF_TAKE3       0x00000008
 #define NGX_CONF_TAKE4       0x00000010
 #define NGX_CONF_TAKE5       0x00000020
@@ -30,7 +30,7 @@
 
 #define NGX_CONF_MAX_ARGS    8
 
-#define NGX_CONF_TAKE12      (NGX_CONF_TAKE1|NGX_CONF_TAKE2)
+#define NGX_CONF_TAKE12      (NGX_CONF_TAKE1|NGX_CONF_TAKE2) //配置项可以带1或2个参数
 #define NGX_CONF_TAKE13      (NGX_CONF_TAKE1|NGX_CONF_TAKE3)
 
 #define NGX_CONF_TAKE23      (NGX_CONF_TAKE2|NGX_CONF_TAKE3)
@@ -39,17 +39,17 @@
 #define NGX_CONF_TAKE1234    (NGX_CONF_TAKE1|NGX_CONF_TAKE2|NGX_CONF_TAKE3   \
                               |NGX_CONF_TAKE4)
 
-#define NGX_CONF_ARGS_NUMBER 0x000000ff
-#define NGX_CONF_BLOCK       0x00000100
-#define NGX_CONF_FLAG        0x00000200
-#define NGX_CONF_ANY         0x00000400
-#define NGX_CONF_1MORE       0x00000800
-#define NGX_CONF_2MORE       0x00001000
+#define NGX_CONF_ARGS_NUMBER 0x000000ff 
+#define NGX_CONF_BLOCK       0x00000100 //配置项定义了一种新的{}块，如：http、server等配置项
+#define NGX_CONF_FLAG        0x00000200 //配置项只能带一个参数，并且参数必需是on或者off
+#define NGX_CONF_ANY         0x00000400 //不验证配置项携带的参数个数
+#define NGX_CONF_1MORE       0x00000800 //配置项携带的参数必需超过一个
+#define NGX_CONF_2MORE       0x00001000 //配置项携带的参数必需超过二个
 
 #define NGX_DIRECT_CONF      0x00010000
 
-#define NGX_MAIN_CONF        0x01000000
-#define NGX_ANY_CONF         0xFF000000
+#define NGX_MAIN_CONF        0x01000000 //配置项可以出现在全局配置中，即不属于任何{}配置块
+#define NGX_ANY_CONF         0xFF000000 //不验证配置项携带的参数个数
 
 
 

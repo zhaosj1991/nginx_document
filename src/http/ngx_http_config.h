@@ -38,13 +38,13 @@ typedef struct {
 
 #define NGX_HTTP_MODULE           0x50545448   /* "HTTP" */
 
-#define NGX_HTTP_MAIN_CONF        0x02000000
-#define NGX_HTTP_SRV_CONF         0x04000000
-#define NGX_HTTP_LOC_CONF         0x08000000
-#define NGX_HTTP_UPS_CONF         0x10000000
-#define NGX_HTTP_SIF_CONF         0x20000000
-#define NGX_HTTP_LIF_CONF         0x40000000
-#define NGX_HTTP_LMT_CONF         0x80000000
+#define NGX_HTTP_MAIN_CONF        0x02000000 //配置项可以出现在http{}块内
+#define NGX_HTTP_SRV_CONF         0x04000000 //配置项可以出现在server{}块内，该server块必需属于http{}块。
+#define NGX_HTTP_LOC_CONF         0x08000000 //配置项可以出现在location{}块内，该location块必需属于server{}块
+#define NGX_HTTP_UPS_CONF         0x10000000 //配置项可以出现在upstream{}块内，该location块必需属于http{}块
+#define NGX_HTTP_SIF_CONF         0x20000000 //配置项可以出现在server{}块内的if{}块中。该if块必须属于http{}块
+#define NGX_HTTP_LIF_CONF         0x40000000 //配置项可以出现在location{}块内的if{}块中。该if块必须属于http{}块
+#define NGX_HTTP_LMT_CONF         0x80000000 //配置项可以出现在limit_except{}块内,该limit_except块必须属于http{}块
 
 
 #define NGX_HTTP_MAIN_CONF_OFFSET  offsetof(ngx_http_conf_ctx_t, main_conf)

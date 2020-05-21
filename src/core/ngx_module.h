@@ -220,8 +220,8 @@
 
 
 struct ngx_module_s {
-    ngx_uint_t            ctx_index;
-    ngx_uint_t            index;
+    ngx_uint_t            ctx_index;    //当前模块在这类模块中的序号
+    ngx_uint_t            index;        //当前模块在所有模块中的序号，参考ngx_module顺序
 
     char                 *name;
 
@@ -231,10 +231,12 @@ struct ngx_module_s {
     ngx_uint_t            version;
     const char           *signature;
 
-    void                 *ctx;
-    ngx_command_t        *commands;
-    ngx_uint_t            type;
+    void                 *ctx;          //ctx执行特定类型模块的公共接口
+    ngx_command_t        *commands;     //处理nginx.conf中的配置项
+    ngx_uint_t            type;         //模块类型
 
+    //nginx框架中会在特定位置调用以下函数指针，我们在模块中需要进行赋值。
+    //如果不进行对应实现，需要赋值为NULL。
     ngx_int_t           (*init_master)(ngx_log_t *log);
 
     ngx_int_t           (*init_module)(ngx_cycle_t *cycle);
@@ -246,6 +248,7 @@ struct ngx_module_s {
 
     void                (*exit_master)(ngx_cycle_t *cycle);
 
+    //保留钩子字段，目前框架中没有调用
     uintptr_t             spare_hook0;
     uintptr_t             spare_hook1;
     uintptr_t             spare_hook2;

@@ -49,12 +49,12 @@ extern ngx_uint_t      ngx_exiting;
 extern sig_atomic_t    ngx_reap;
 extern sig_atomic_t    ngx_sigio;
 extern sig_atomic_t    ngx_sigalrm;
-extern sig_atomic_t    ngx_quit;
+extern sig_atomic_t    ngx_quit;        //优雅关闭进程
 extern sig_atomic_t    ngx_debug_quit;
-extern sig_atomic_t    ngx_terminate;
+extern sig_atomic_t    ngx_terminate;   //强制关闭进程
 extern sig_atomic_t    ngx_noaccept;
 extern sig_atomic_t    ngx_reconfigure;
-extern sig_atomic_t    ngx_reopen;
+extern sig_atomic_t    ngx_reopen;      //重新打开所有文件
 extern sig_atomic_t    ngx_change_binary;
 
 
