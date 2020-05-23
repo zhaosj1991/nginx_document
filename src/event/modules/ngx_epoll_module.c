@@ -94,10 +94,16 @@ struct io_event {
 #endif
 #endif /* NGX_TEST_BUILD_EPOLL */
 
+/*
+linux man epoll_wait
+
+int epoll_wait(int epfd, struct epoll_event *events,
+                      int maxevents, int timeout);
+*/
 
 typedef struct {
-    ngx_uint_t  events;
-    ngx_uint_t  aio_requests;
+    ngx_uint_t  events;         //events用作epoll_wait的maxevents参数
+    ngx_uint_t  aio_requests;   //
 } ngx_epoll_conf_t;
 
 
@@ -158,6 +164,8 @@ static ngx_str_t      epoll_name = ngx_string("epoll");
 
 static ngx_command_t  ngx_epoll_commands[] = {
 
+    //调用一次epoll_wait时最多可以返回的事件数，它也会预分配这么
+    //多epoll_event结构体用于存储事件
     { ngx_string("epoll_events"),
       NGX_EVENT_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,

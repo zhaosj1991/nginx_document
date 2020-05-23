@@ -37,17 +37,18 @@ struct ngx_shm_zone_s {
 
 
 struct ngx_cycle_s {
-    void                  ****conf_ctx;
+    void                  ****conf_ctx;         //所有模块存储配置项的结构体指针
     ngx_pool_t               *pool;
 
-    ngx_log_t                *log;
-    ngx_log_t                 new_log;
+    ngx_log_t                *log;              //日志模块中提供了生成基本ngx_log_t日志对象的功能
+    ngx_log_t                 new_log;          //调用ngx_init_cycle方法后，会用new_log的地址覆盖上面的log指针
 
     ngx_uint_t                log_use_stderr;  /* unsigned  log_use_stderr:1; */
 
+    //fiels保存所有ngx_connection_t的指针组成的数组，files_n就是指针的总数，而文件句柄的值用来访问files数组成员
     ngx_connection_t        **files;
     ngx_connection_t         *free_connections; //连接池中可用连接总数
-    ngx_uint_t                free_connection_n;
+    ngx_uint_t                free_connection_n;//空闲连接池中连接的总数
 
     ngx_module_t            **modules;
     ngx_uint_t                modules_n;
@@ -56,8 +57,10 @@ struct ngx_cycle_s {
     ngx_queue_t               reusable_connections_queue;
     ngx_uint_t                reusable_connections_n;
 
-    ngx_array_t               listening;
-    ngx_array_t               paths;
+    ngx_array_t               listening;    //存储ngx_listening_t成员
+    
+    //保存着Nginx所有要操作的目录，如果目录不存在，则会试图创建，而创建目录失败将会导致Nginx启动失败。
+    ngx_array_t               paths;        
 
     ngx_array_t               config_dump;
     ngx_rbtree_t              config_dump_rbtree;
@@ -67,20 +70,26 @@ struct ngx_cycle_s {
     ngx_list_t                shared_memory;
 
     ngx_uint_t                connection_n;
-    ngx_uint_t                files_n;
+    ngx_uint_t                files_n;      //表示files数组中ngx_connection_t指针的总数
 
-    ngx_connection_t         *connections;
-    ngx_event_t              *read_events;
-    ngx_event_t              *write_events;
+    ngx_connection_t         *connections;  //指向当前进程中的所有连接对象，每个连接对象对应一个写事件和一个读事件
+    ngx_event_t              *read_events;  //指向当前进程中的所有写事件对象，connection_n同时表示所有读事件的总数
+    ngx_event_t              *write_events; //指向当前进程中的所有写事件对象，connection_n同时表示所有写事件的总数
 
+    /*
+        旧的ngx_cycle_t对象用于引用上一个ngx_cycle_t对象中的成员，例如ngx_init_cycle方法，
+        在启动初期，需要建立一个临时的ngx_cycle_t对象保存一些变量，在调用ngx_init_cycle方法时，
+        就可以把旧的ngx_cycle_t的对象传进去，而这时old_clcle对象
+        就会保存这个前期的ngx_clcle_t对象。
+    */
     ngx_cycle_t              *old_cycle;
 
-    ngx_str_t                 conf_file;
-    ngx_str_t                 conf_param;
-    ngx_str_t                 conf_prefix;
-    ngx_str_t                 prefix;
-    ngx_str_t                 lock_file;
-    ngx_str_t                 hostname;
+    ngx_str_t                 conf_file;    //配置文件相对于安装目录的路径名称
+    ngx_str_t                 conf_param;   //Nginx处理配置文件时需要特殊处理的在命令行携带的参数，一般是-g选项携带的参数
+    ngx_str_t                 conf_prefix;  //Nginx配置文件所在的路径
+    ngx_str_t                 prefix;       //Nginx安装目录的路径
+    ngx_str_t                 lock_file;    //用于进程间同步的文件锁名称
+    ngx_str_t                 hostname;     //使用gethostname系统调用得到的主机名
 };
 
 

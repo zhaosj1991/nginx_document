@@ -68,7 +68,7 @@ ngx_cpystrn(u_char *dst, u_char *src, size_t n)
     return dst;
 }
 
-
+//参考strdup，内部申请内存并复制src数据，然后返回该内存指针
 u_char *
 ngx_pstrdup(ngx_pool_t *pool, ngx_str_t *src)
 {

@@ -121,7 +121,16 @@ typedef struct iocb  ngx_aiocb_t;
 #define NGX_HAVE_OS_SPECIFIC_INIT    1
 #define ngx_debug_init()
 
+/*
+    environ属于linux系统定义的变量，通过 man environ 以下可以看到介绍。
+    通过printf循环打印environ[i]就可以看到，其实environ保存了当前终端
+    的所有环境变量，linux的env命令就是打印了这个数组的内容。
 
+   The  variable  environ  points  to  an array of pointers to strings called the "environment".  The last pointer in this
+   array has the value NULL.  (This variable must be declared in the user program, but is  declared  in  the  header  file
+   <unistd.h>  if  the _GNU_SOURCE feature test macro is defined.)  This array of strings is made available to the process
+   by the exec(3) call that started the process.
+*/
 extern char **environ;
 
 

@@ -159,9 +159,9 @@ struct ngx_connection_s {
 
     int                 type;
 
-    struct sockaddr    *sockaddr;
+    struct sockaddr    *sockaddr; //连接客户端的sockaddr结构体
     socklen_t           socklen;
-    ngx_str_t           addr_text;
+    ngx_str_t           addr_text;//客户端字符串形式的IP地址
 
     ngx_proxy_protocol_t  *proxy_protocol;
 
@@ -176,8 +176,12 @@ struct ngx_connection_s {
 
     ngx_buf_t          *buffer;
 
+    //该字段用来将当前连接以双向链表元素的形式添加到ngx_cycle_t核心结构
+    //体的reusable_connections_queue双向链表中，表示可以重用的连接
     ngx_queue_t         queue;
 
+    //连接使用次数。ngx_connection_t结构体每次建立一条来自客户端的连接，或者
+    //用于主动向后端服务器发起连接时（ngx_peer_connection也使用它），number都会加一
     ngx_atomic_uint_t   number;
 
     ngx_uint_t          requests;

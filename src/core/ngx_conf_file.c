@@ -67,6 +67,7 @@ ngx_conf_param(ngx_conf_t *cf)
     ngx_buf_t         b;
     ngx_conf_file_t   conf_file;
 
+    //处理配置文件时命令行传入的参数
     param = &cf->cycle->conf_param;
 
     if (param->len == 0) {
@@ -83,10 +84,18 @@ ngx_conf_param(ngx_conf_t *cf)
     b.end = b.last;
     b.temporary = 1;
 
+    //本函数中，ngx_conf_parse要解析param类型，需要将file.fd置为NGX_INVALID_FILE
     conf_file.file.fd = NGX_INVALID_FILE;
     conf_file.file.name.data = NULL;
     conf_file.line = 0;
 
+    /*
+        ngx_conf_parse可以用来解析三种类型：
+        
+        1.文件，此时第二个参数传入文件名称即可
+        2.block，此时待解析内容位于cf->conf_file->file.fd
+        3.param，此时待解析内容位于cf->conf_file->buffer
+    */
     cf->conf_file = &conf_file;
     cf->conf_file->buffer = &b;
 
@@ -173,6 +182,7 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
     prev = NULL;
 #endif
 
+    //选择ngx_conf_parse解析的类型，file、block、param
     if (filename) {
 
         /* open configuration file */
@@ -232,9 +242,11 @@ ngx_conf_parse(ngx_conf_t *cf, ngx_str_t *filename)
 
     } else if (cf->conf_file->file.fd != NGX_INVALID_FILE) {
 
+        //此时buf内存由上层调用函数申请
         type = parse_block;
 
     } else {
+        //此时buf(cf->conf_file->buffer)内存由上层调用函数申请，而且其中填充着待解析的param内容
         type = parse_param;
     }
 
@@ -498,7 +510,40 @@ invalid:
     return NGX_ERROR;
 }
 
+/*
+    该函数比较复杂，因为是解析字符，最好先了解它的目标是什么。
+    当然核心目标就是解析字符，它的作用有点像编译原理中的词法分析，不严谨
+    的说就是把一个一个的单词识别并存储起来，将空格、$、#、;、{、} 等不属于
+    单词的部分筛除掉。
 
+    正常情况下的退出条件，异常分支忽略：
+        1.遇到 ;    {  } 这三个字符
+            ; 表示一个配置项的结束；
+            { 表示一个配置块的开始；
+            } 表示一个配置块的结束；
+        2.配置文件读取完毕
+
+    所以如果没有遇到以上情况，ngx_conf_read_token会一直陷入无限循环，
+    它会对逐个字符进行分析，并对应切换当前解析字符处于的状态。
+
+    个人认为把握住描述状态的几个核心变量，就能把握住整个过程了。
+
+    1. need_space，默认值为0，遇到单引号或双引号结束时，会置1。此时下一个
+        字符必须是空格、换行、回车之类的分隔符，或者是; } ) 之类的结束符
+
+    2. last_space，遇到空格、换行、回车之类的分隔符，或者是; { } 之类的字符
+        会置1，表明一个token结束了，token可以理解成中间没有分隔符的一串字符，
+        英文语句中的一个单词就可以理解为一个token，有几个单词就有几个token。
+        不同的是此处的token不止有字母，还可以包含$ / # 等，最好可以先了解下
+        nginx.conf配置文件的用法，这样更容易理解些。
+        
+    3. found，表示找到了一个有效token，后面的 if(found) 分支会将这个解析到的
+        token放到 cf->args 中，cf->args其实就是ngx_conf_read_token的核心输出参数。
+        
+        绝大多数情况下last_space置1的时候found也会置1，还有几个特例，遇到单双引号
+        结束也会将found置1，此时都会要求下一个字符是分隔符，need_space置1.
+    
+*/
 static ngx_int_t
 ngx_conf_read_token(ngx_conf_t *cf)
 {
@@ -513,7 +558,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
 
     found = 0;
     need_space = 0;
-    last_space = 1;
+    last_space = 1; //表示上一个字符为token分隔符
     sharp_comment = 0;
     variable = 0;
     quoted = 0;
@@ -530,6 +575,10 @@ ngx_conf_read_token(ngx_conf_t *cf)
 
     for ( ;; ) {
 
+        /*
+            b->pos >= b->last条件成立：       表明buf是空的，解析的内容需要从文件读取到buf中；
+            b->pos >= b->last条件不成立：表明buf非空，解析的内容在buf中，不需要从文件读取；
+        */
         if (b->pos >= b->last) {
 
             if (cf->conf_file->file.offset >= file_size) {
@@ -586,6 +635,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                 size = b->end - (b->start + len);
             }
 
+            //file文件中的内容读取到b中
             n = ngx_read_file(&cf->conf_file->file, b->start + len, size,
                               cf->conf_file->file.offset);
 
@@ -612,6 +662,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
 
         ch = *b->pos++;
 
+        //用于跳出注释行的状态，也就是将sharp_comment清零
         if (ch == LF) {
             cf->conf_file->line++;
 
@@ -620,15 +671,18 @@ ngx_conf_read_token(ngx_conf_t *cf)
             }
         }
 
+        //当前还处于注释行，直接continue
         if (sharp_comment) {
             continue;
         }
 
+        //转义字符直接跳过
         if (quoted) {
             quoted = 0;
             continue;
         }
 
+        //上一个字符为单引号或者双引号,期待一个分隔符
         if (need_space) {
             if (ch == ' ' || ch == '\t' || ch == CR || ch == LF) {
                 last_space = 1;
@@ -655,6 +709,23 @@ ngx_conf_read_token(ngx_conf_t *cf)
             }
         }
 
+        /*
+            如果last_space = 1，表示上一个字符是token分隔符，该分支需要对解析出来的token
+            进行一个判断，分析出该token所代表的状态，ngx_conf_read_token对这些状态进行了描述。
+
+             *
+             * ngx_conf_read_token() may return
+             *
+             *    NGX_ERROR             there is error
+             *    NGX_OK                the token terminated by ";" was found
+             *    NGX_CONF_BLOCK_START  the token terminated by "{" was found
+             *    NGX_CONF_BLOCK_DONE   the "}" was found
+             *    NGX_CONF_FILE_DONE    the configuration file is done
+             *
+
+            
+            顺便将后续多余的空格、tab、换行、回车过滤掉
+        */
         if (last_space) {
 
             start = b->pos - 1;
@@ -689,6 +760,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
 
                 return NGX_CONF_BLOCK_DONE;
 
+            // 后续这几个都不会返回，因为它们表明参数还没分析完
             case '#':
                 sharp_comment = 1;
                 continue;
@@ -720,31 +792,32 @@ ngx_conf_read_token(ngx_conf_t *cf)
             }
 
         } else {
+            //variable=1表明上个字符是$
             if (ch == '{' && variable) {
                 continue;
             }
 
             variable = 0;
 
-            if (ch == '\\') {
+            if (ch == '\\') {   //后续字符是转义的字符
                 quoted = 1;
                 continue;
             }
 
-            if (ch == '$') {
+            if (ch == '$') {    //后续字符是$引用的变量
                 variable = 1;
                 continue;
             }
 
-            if (d_quoted) {
-                if (ch == '"') {
+            if (d_quoted) {         //d_quoted标明后续字符是否位于双引号中
+                if (ch == '"') {    //双引号中的内容结束
                     d_quoted = 0;
                     need_space = 1;
                     found = 1;
                 }
 
-            } else if (s_quoted) {
-                if (ch == '\'') {
+            } else if (s_quoted) {  //d_quoted标明后续字符是否位于单引号中
+                if (ch == '\'') {   //单引号中的内容结束
                     s_quoted = 0;
                     need_space = 1;
                     found = 1;
@@ -773,6 +846,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                      len++)
                 {
                     if (*src == '\\') {
+                        //'\'转义分支，把转义字符\后的字符放入dst即可
                         switch (src[1]) {
                         case '"':
                         case '\'':
@@ -797,6 +871,7 @@ ngx_conf_read_token(ngx_conf_t *cf)
                         }
 
                     }
+                    //不是转义字符，直接将对应内容放入dst即可
                     *dst++ = *src++;
                 }
                 *dst = '\0';

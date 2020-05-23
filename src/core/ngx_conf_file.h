@@ -114,21 +114,21 @@ typedef char *(*ngx_conf_handler_pt)(ngx_conf_t *cf,
 
 
 struct ngx_conf_s {
-    char                 *name;
-    ngx_array_t          *args;
+    char                 *name; //存放当前解析到的指令
+    ngx_array_t          *args; //存放包含该指令的所有参数
 
     ngx_cycle_t          *cycle;
     ngx_pool_t           *pool;
-    ngx_pool_t           *temp_pool;
-    ngx_conf_file_t      *conf_file;
+    ngx_pool_t           *temp_pool; //用于存放解析配置文件的临时内存池，解析后会释放
+    ngx_conf_file_t      *conf_file; //ngx_conf_file_t结构体的指针
     ngx_log_t            *log;
 
     void                 *ctx;
-    ngx_uint_t            module_type;
-    ngx_uint_t            cmd_type;
+    ngx_uint_t            module_type;  //支持指令的模块类型
+    ngx_uint_t            cmd_type;     //指令的类型
 
-    ngx_conf_handler_pt   handler;
-    void                 *handler_conf;
+    ngx_conf_handler_pt   handler;      //指令自定义的处理函数
+    void                 *handler_conf; //自定义处理函数需要的相关配置
 };
 
 

@@ -61,9 +61,15 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     tp = ngx_timeofday();
     tp->sec = 0;
 
+    //更新当前最新时间
     ngx_time_update();
 
-
+    /*
+        正常流程log应该是在cycle中初始化的，但是nginx main开始也需要log记录，
+        但此时cycle还没初始化，所以就有了old_cycle，它并不是用于真正的cycle过程，
+        只是作为cycle初始化前的一个cycle temp，从而提供些cycle初始化前的cycle部分功能。
+        真正的cycle初始化需要把这个cycle temp中有的内容（主要就是log）转移到新cycle中。
+    */
     log = old_cycle->log;
 
     pool = ngx_create_pool(NGX_CYCLE_POOL_SIZE, log);
@@ -82,6 +88,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     cycle->log = log;
     cycle->old_cycle = old_cycle;
 
+    //配置文件所在路径conf_prefix赋值
     cycle->conf_prefix.len = old_cycle->conf_prefix.len;
     cycle->conf_prefix.data = ngx_pstrdup(pool, &old_cycle->conf_prefix);
     if (cycle->conf_prefix.data == NULL) {
@@ -89,6 +96,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
+    //nginx安装路径prefix赋值
     cycle->prefix.len = old_cycle->prefix.len;
     cycle->prefix.data = ngx_pstrdup(pool, &old_cycle->prefix);
     if (cycle->prefix.data == NULL) {
@@ -96,6 +104,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
+    //配置文件对于安装目录的相对路径conf_file赋值
     cycle->conf_file.len = old_cycle->conf_file.len;
     cycle->conf_file.data = ngx_pnalloc(pool, old_cycle->conf_file.len + 1);
     if (cycle->conf_file.data == NULL) {
@@ -105,6 +114,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     ngx_cpystrn(cycle->conf_file.data, old_cycle->conf_file.data,
                 old_cycle->conf_file.len + 1);
 
+    //配置文件时需要特殊处理的命令行携带的参数
     cycle->conf_param.len = old_cycle->conf_param.len;
     cycle->conf_param.data = ngx_pstrdup(pool, &old_cycle->conf_param);
     if (cycle->conf_param.data == NULL) {
@@ -112,7 +122,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
-
+    //申请nginx操作的目录数组
     n = old_cycle->paths.nelts ? old_cycle->paths.nelts : 10;
 
     if (ngx_array_init(&cycle->paths, pool, n, sizeof(ngx_path_t *))
@@ -145,6 +155,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         n = 20;
     }
 
+    //初始化打开文件open_files链表
     if (ngx_list_init(&cycle->open_files, pool, n, sizeof(ngx_open_file_t))
         != NGX_OK)
     {
@@ -152,7 +163,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
-
+    //共享内存
     if (old_cycle->shared_memory.part.nelts) {
         n = old_cycle->shared_memory.part.nelts;
         for (part = old_cycle->shared_memory.part.next; part; part = part->next)
@@ -171,6 +182,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
+    //存储ngx_listening_t成员的数组申请
     n = old_cycle->listening.nelts ? old_cycle->listening.nelts : 10;
 
     if (ngx_array_init(&cycle->listening, pool, n, sizeof(ngx_listening_t))
@@ -182,7 +194,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     ngx_memzero(cycle->listening.elts, n * sizeof(ngx_listening_t));
 
-
+    //初始后可重用连接队列
     ngx_queue_init(&cycle->reusable_connections_queue);
 
 
@@ -201,6 +213,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     /* on Linux gethostname() silently truncates name that does not fit */
 
+    //gethostname获取的主机名
     hostname[NGX_MAXHOSTNAMELEN - 1] = '\0';
     cycle->hostname.len = ngx_strlen(hostname);
 
@@ -210,15 +223,17 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
+    //hostname转换为小写
     ngx_strlow(cycle->hostname.data, (u_char *) hostname, cycle->hostname.len);
 
-
+    //将所有的module信息拷贝到cycle->modules中
     if (ngx_cycle_modules(cycle) != NGX_OK) {
         ngx_destroy_pool(pool);
         return NULL;
     }
 
-
+    //调用所有核心模块（NGX_CORE_MODULE）的create_conf接口，将创建用于保存
+    //配置信息的内存指针添加到cycle->conf_ctx数组中
     for (i = 0; cycle->modules[i]; i++) {
         if (cycle->modules[i]->type != NGX_CORE_MODULE) {
             continue;
@@ -236,12 +251,13 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         }
     }
 
-
+    //environ是一个系统变量，其中保存了系统中的环境变量，也就是env命令输出的内容
     senv = environ;
 
-
+    //conf是一个局部零时变量
     ngx_memzero(&conf, sizeof(ngx_conf_t));
     /* STUB: init array ? */
+    //创建size为10的ngx_str_t类型数组，用来存放解析出来的参数
     conf.args = ngx_array_create(pool, 10, sizeof(ngx_str_t));
     if (conf.args == NULL) {
         ngx_destroy_pool(pool);
@@ -254,7 +270,8 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
         return NULL;
     }
 
-
+    //初始化conf，因为conf是零时的局部变量，ngx_init_cycle函数结束也就释放了
+    //
     conf.ctx = cycle->conf_ctx;
     conf.cycle = cycle;
     conf.pool = pool;
@@ -266,6 +283,9 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     log->log_level = NGX_LOG_DEBUG_ALL;
 #endif
 
+    /* 前面都是些变量信息的准备，后续就进入 ngx_init_cycle 操作正文了*/
+
+    //
     if (ngx_conf_param(&conf) != NGX_CONF_OK) {
         environ = senv;
         ngx_destroy_cycle_pools(&conf);
